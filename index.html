@@ -48,9 +48,9 @@
     h1 { font-size: clamp(42px, 8vw, 76px); line-height: .96; letter-spacing: -.055em; margin: 22px 0 16px; max-width: 760px; }
     .lede { color: var(--muted); font-size: 18px; line-height: 1.6; max-width: 650px; margin: 0; }
 
-    .toolbar {
-      margin: 34px 0 20px; display: grid; grid-template-columns: 1fr auto auto; gap: 10px;
-    }
+      .toolbar {
+        margin: 34px 0 20px; display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px;
+      }
     .control {
       min-height: 46px; border: 1px solid var(--line); background: var(--panel); color: var(--text);
       border-radius: 14px; padding: 0 14px; outline: none;
@@ -58,6 +58,7 @@
     .control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
     button.control { cursor: pointer; font-weight: 750; }
     button.control:hover { transform: translateY(-1px); }
+    button.control.active { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 
     .summary {
       display: flex; align-items: center; justify-content: space-between; gap: 16px;
@@ -115,6 +116,7 @@
         <option value="4.5">M 4.5+</option>
         <option value="6">M 6.0+</option>
       </select>
+      <button id="tsunami" class="control" type="button" aria-pressed="false">Tsunami: off</button>
       <button id="refresh" class="control" type="button">Refresh</button>
     </section>
 
@@ -140,7 +142,12 @@
     const updated = document.querySelector('#updated');
     const search = document.querySelector('#search');
     const magnitude = document.querySelector('#magnitude');
+    const tsunami = document.querySelector('#tsunami');
     const refresh = document.querySelector('#refresh');
+
+    const TSUNAMI_STATES = ['off', 'warn', 'alert'];
+    const TSUNAMI_LABELS = { off: 'Tsunami: off', warn: 'Tsunami: flagged', alert: 'Tsunami: alert' };
+    let tsunamiFilter = 'off';
 
     let earthquakes = [];
     let generatedAt = null;
@@ -166,17 +173,23 @@
     function render() {
       const query = search.value.trim().toLowerCase();
       const minMag = Number(magnitude.value);
+      const flagged = tsunamiFilter === 'warn' || tsunamiFilter === 'alert';
 
       const filtered = earthquakes
         .filter(({ properties }) => (properties.mag ?? -10) >= minMag)
         .filter(({ properties }) => (properties.place || 'Unknown location').toLowerCase().includes(query))
+        .filter(({ properties }) => {
+          if (tsunamiFilter === 'off') return true;
+          if (tsunamiFilter === 'alert') return properties.tsunami === 1;
+          return flagged && properties.tsunami > 0;
+        })
         .sort((a, b) => b.properties.time - a.properties.time);
 
       count.textContent = `${filtered.length} earthquake${filtered.length === 1 ? '' : 's'} shown`;
       updated.textContent = generatedAt ? `Feed updated ${timeAgo(generatedAt)}` : '';
 
       if (!filtered.length) {
-        list.innerHTML = '<div class="state"><div><strong>No matches.</strong>Try another place or a lower magnitude threshold.</div></div>';
+        list.innerHTML = '<div class="state"><div><strong>No matches.</strong>Try another place, a lower magnitude threshold, or turn off the tsunami filter.</div></div>';
         return;
       }
 
@@ -226,6 +239,13 @@
 
     search.addEventListener('input', render);
     magnitude.addEventListener('change', render);
+    tsunami.addEventListener('click', () => {
+      tsunamiFilter = TSUNAMI_STATES[(TSUNAMI_STATES.indexOf(tsunamiFilter) + 1) % TSUNAMI_STATES.length];
+      tsunami.textContent = TSUNAMI_LABELS[tsunamiFilter];
+      tsunami.setAttribute('aria-pressed', tsunamiFilter === 'off' ? 'false' : 'true');
+      tsunami.classList.toggle('active', tsunamiFilter !== 'off');
+      render();
+    });
     refresh.addEventListener('click', loadEarthquakes);
 
     loadEarthquakes();
