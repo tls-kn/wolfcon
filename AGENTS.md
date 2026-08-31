@@ -13,6 +13,12 @@ Zero-build static web app displaying recent worldwide earthquakes from the USGS 
 
 - **Serve locally:** `python3 -m http.server 8000`
 - There are no build, test, lint, or format commands.
+- **Deploy:** push to `main` — GitHub Pages auto-publishes to `https://tls-kn.github.io/wolfcon/`.
+
+## Filtering
+
+- Search (by place), minimum-magnitude select, and a tsunami filter button.
+- The tsunami button cycles through three states: `off` (no filter), `flagged` (`tsunami > 0`), and `alert` (`tsunami === 1`). State is tracked in `tsunamiFilter` with labels in `TSUNAMI_LABELS`.
 
 ## Data Source
 
